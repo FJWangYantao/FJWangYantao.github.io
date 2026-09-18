@@ -1,1 +1,2099 @@
-Hello World
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>hjt · 书写系统与思考</title>
+<meta name="description" content="hjt 的个人写作站：操作系统内核机制、计算机体系结构、大模型 Agent 工作流与认知科学的交汇记录。" />
+<meta name="color-scheme" content="light dark" />
+<meta property="og:title" content="hjt · 书写系统与思考" />
+<meta property="og:description" content="在复杂计算系统里，寻找确定性的秩序。" />
+<meta property="og:type" content="website" />
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23D97757'/%3E%3Ctext x='16' y='23' font-family='serif' font-size='19' font-weight='700' fill='%23FAF7F2' text-anchor='middle'%3Eh%3C/text%3E%3C/svg%3E" />
+
+<!-- 主题必须在首绘前确定，否则深色用户会看到整屏闪白 -->
+<script>
+  (function () {
+    try {
+      var saved = localStorage.getItem('hjt_theme');
+      if (saved !== 'light' && saved !== 'dark') {
+        saved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.setAttribute('data-theme', saved);
+    } catch (e) {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  })();
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Noto+Serif+SC:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+/* =============================================================================
+   Claude / Anthropic Editorial Design System
+   Refined warmth, academic typography, serene paper surfaces & restrained craft.
+   ============================================================================= */
+
+/* -----------------------------------------------------------------------------
+   1. Design Tokens (Warm Parchment & Claude Terracotta)
+   ----------------------------------------------------------------------------- */
+:root {
+  /* Typography */
+  --font-serif: "Newsreader", "Lora", "Noto Serif SC", "Songti SC", "SimSun", Georgia, serif;
+  --font-sans:  "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-mono:  "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Spacing Rhythm */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+  --sp-8: 40px;
+  --sp-9: 48px;
+  --sp-10: 64px;
+  --sp-11: 88px;
+
+  /* Geometry & Radius */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-full: 9999px;
+
+  /* Motion */
+  --ease-warm: cubic-bezier(0.16, 1, 0.3, 1);
+  --trans-fast: 0.16s var(--ease-warm);
+  --trans-normal: 0.28s var(--ease-warm);
+  --trans-slow: 0.45s var(--ease-warm);
+
+  /* Claude Light Palette (Warm Ivory / Editorial Clay) */
+  --bg-page:        #FAF8F5; /* Claude Warm Linen */
+  --bg-surface:     #FFFFFF; /* Pure White Card */
+  --bg-surface-sub: #F4EFEA; /* Subtle Ivory Tint */
+  --bg-hover:       #F2ECE4; /* Warm Interactive Hover */
+  --bg-code:        #F3EFE9; /* Codeblock Parchment */
+  
+  --text-main:      #1F1E1D; /* Charcoal Ink (High Contrast AA/AAA) */
+  --text-body:      #383531; /* Deep Warm Charcoal */
+  --text-muted:     #6E685F; /* Refined Sepia Grey */
+  --text-faint:     #968E84; /* Faint Timestamp / Border Accents */
+
+  /* Claude Signature Terracotta & Warm Coral */
+  --accent-terra:   #CC6242; /* Claude Terracotta Core */
+  --accent-hover:   #BA5536; /* Deep Terracotta */
+  --accent-soft:    rgba(204, 98, 66, 0.08); /* Terracotta Wash */
+  --accent-tint:    rgba(204, 98, 66, 0.15); /* Badge Border */
+  --accent:         var(--accent-terra);
+
+  /* Delicate Architectural Borders */
+  --line-light:     rgba(56, 53, 49, 0.07);
+  --line-strong:    rgba(56, 53, 49, 0.13);
+  --line-focus:     #CC6242;
+
+  /* Soft Ambient Shadows */
+  --shadow-sm:      0 1px 2px rgba(45, 38, 30, 0.04), 0 1px 3px rgba(45, 38, 30, 0.02);
+  --shadow-card:    0 2px 8px -2px rgba(45, 38, 30, 0.05), 0 1px 3px rgba(45, 38, 30, 0.03);
+  --shadow-hover:   0 8px 24px -6px rgba(45, 38, 30, 0.08), 0 2px 6px rgba(45, 38, 30, 0.04);
+  --shadow-modal:   0 24px 60px -12px rgba(28, 22, 16, 0.18), 0 8px 24px -4px rgba(28, 22, 16, 0.08);
+
+  --selection:      rgba(204, 98, 66, 0.18);
+  --backdrop:       rgba(24, 22, 20, 0.45);
+}
+
+/* Claude Dark Palette (Warm Roasted Espresso & Amber Glow) */
+[data-theme="dark"] {
+  --bg-page:        #181715; /* Warm Deep Obsidian */
+  --bg-surface:     #211F1C; /* Roasted Cacao Surface */
+  --bg-surface-sub: #282522; /* Raised Warm Charcoal */
+  --bg-hover:       #2E2A26; /* Hover highlight */
+  --bg-code:        #1E1C1A; /* Inset Code Cavity */
+
+  --text-main:      #F5F2EC; /* Warm Cream Text */
+  --text-body:      #DDD7CC; /* Soft Eggshell Body */
+  --text-muted:     #A59E92; /* Warm Slate */
+  --text-faint:     #6D665B; /* Quiet Sepia */
+
+  /* Claude Terracotta (Vibrant in Dark) */
+  --accent-terra:   #D97757; /* Claude Amber Terracotta */
+  --accent-hover:   #E28769;
+  --accent-soft:    rgba(217, 119, 87, 0.14);
+  --accent-tint:    rgba(217, 119, 87, 0.28);
+  --accent:         var(--accent-terra);
+
+  --line-light:     rgba(245, 242, 236, 0.08);
+  --line-strong:    rgba(245, 242, 236, 0.14);
+  --line-focus:     #D97757;
+
+  --shadow-sm:      0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-card:    0 2px 10px -2px rgba(0, 0, 0, 0.45);
+  --shadow-hover:   0 8px 24px -4px rgba(0, 0, 0, 0.6);
+  --shadow-modal:   0 24px 64px -12px rgba(0, 0, 0, 0.75);
+
+  --selection:      rgba(217, 119, 87, 0.3);
+  --backdrop:       rgba(10, 9, 8, 0.72);
+}
+
+/* -----------------------------------------------------------------------------
+   2. Reset & Literary Foundation
+   ----------------------------------------------------------------------------- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: var(--font-sans);
+  background-color: var(--bg-page);
+  color: var(--text-body);
+  font-size: 16px;
+  line-height: 1.68;
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  min-height: 100vh;
+  position: relative;
+  background-color: var(--bg-page);
+  color: var(--text-body);
+  overflow-x: hidden;
+  transition: background-color var(--trans-normal), color var(--trans-normal);
+}
+
+::selection {
+  background: var(--selection);
+  color: inherit;
+}
+
+img, svg {
+  display: block;
+}
+
+button, input {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--trans-fast);
+}
+
+/* Focus Visible Accessible Ring */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--radius-xs);
+}
+
+/* Skip Navigation Link */
+.skip-link {
+  position: absolute;
+  top: var(--sp-4);
+  left: var(--sp-4);
+  z-index: 1000;
+  background: var(--accent);
+  color: #FFFFFF;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 600;
+  transform: translateY(-180%);
+  transition: transform var(--trans-fast);
+  box-shadow: var(--shadow-hover);
+}
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+/* Screen Reader Only Utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Page Shell Layout */
+.shell {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 var(--sp-6);
+  width: 100%;
+}
+
+/* -----------------------------------------------------------------------------
+   3. Site Header & Claude Identity
+   ----------------------------------------------------------------------------- */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 90;
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  background-color: rgba(250, 248, 245, 0.88);
+  border-bottom: 1px solid var(--line-light);
+  transition: background-color var(--trans-normal), border-color var(--trans-normal);
+}
+[data-theme="dark"] .site-header {
+  background-color: rgba(24, 23, 21, 0.88);
+}
+
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  gap: var(--sp-4);
+}
+
+/* Brand Identity */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+  font-weight: 600;
+  color: var(--text-main);
+  letter-spacing: -0.015em;
+  font-size: 1.0625rem;
+  transition: opacity var(--trans-fast);
+}
+.brand:hover {
+  opacity: 0.82;
+}
+
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background-color: var(--accent);
+  color: #FFFFFF;
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.25), 0 2px 6px rgba(204, 98, 66, 0.25);
+}
+
+.brand-tail {
+  font-family: var(--font-serif);
+  font-style: italic;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  padding-left: var(--sp-3);
+  border-left: 1px solid var(--line-strong);
+}
+
+/* Desktop Navigation */
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-6);
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.nav a {
+  color: var(--text-muted);
+  position: relative;
+  padding: var(--sp-1) 0;
+  transition: color var(--trans-fast);
+}
+.nav a:hover {
+  color: var(--text-main);
+}
+.nav a[aria-current="true"] {
+  color: var(--accent);
+  font-weight: 600;
+}
+.nav a[aria-current="true"]::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--accent);
+  border-radius: 2px;
+}
+
+/* Header Action Tools */
+.header-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  transition: background-color var(--trans-fast), color var(--trans-fast), transform var(--trans-fast);
+}
+.icon-btn:hover {
+  color: var(--text-main);
+  background-color: var(--bg-hover);
+}
+.icon-btn:active {
+  transform: scale(0.96);
+}
+
+.icon-btn .keyhint {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 600;
+  background-color: var(--bg-surface-sub);
+  color: var(--text-muted);
+  padding: 0 4px;
+  border-radius: 4px;
+  border: 1px solid var(--line-strong);
+  line-height: 1.3;
+}
+
+.menu-btn {
+  display: none;
+}
+
+/* Mobile Navigation Drawer */
+.mobile-nav {
+  display: none;
+}
+
+/* -----------------------------------------------------------------------------
+   4. Hero Section (Claude Academic Warmth & Literary Intro)
+   ----------------------------------------------------------------------------- */
+.hero {
+  position: relative;
+  padding: var(--sp-10) 0 var(--sp-8);
+  border-bottom: 1px solid var(--line-light);
+  overflow: hidden;
+}
+
+.hero-glow {
+  position: absolute;
+  top: -80px;
+  right: -80px;
+  width: 340px;
+  height: 340px;
+  background: radial-gradient(circle, var(--accent-soft) 0%, rgba(204, 98, 66, 0) 70%);
+  pointer-events: none;
+  filter: blur(50px);
+  z-index: 0;
+  opacity: 0.75;
+}
+
+.hero-status {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--accent);
+  background-color: var(--accent-soft);
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--accent-tint);
+  margin-bottom: var(--sp-6);
+  letter-spacing: 0.02em;
+}
+
+/* Claude Terracotta Soft Pulse */
+.pulse {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--accent);
+  box-shadow: 0 0 0 0 rgba(204, 98, 66, 0.6);
+  animation: claudePulse 2.4s infinite var(--ease-warm);
+}
+
+@keyframes claudePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(204, 98, 66, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(204, 98, 66, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(204, 98, 66, 0);
+  }
+}
+
+.hero h1 {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-serif);
+  font-size: 2.375rem;
+  line-height: 1.25;
+  font-weight: 500;
+  color: var(--text-main);
+  letter-spacing: -0.022em;
+  margin-bottom: var(--sp-5);
+  max-width: 680px;
+}
+
+.hero h1 em {
+  font-style: italic;
+  font-weight: 500;
+  color: var(--accent);
+  padding: 0 3px;
+  background: linear-gradient(180deg, transparent 65%, var(--accent-soft) 65%);
+  border-radius: 2px;
+}
+
+.hero-lead {
+  position: relative;
+  z-index: 1;
+  font-size: 1.125rem;
+  line-height: 1.78;
+  color: var(--text-muted);
+  max-width: 680px;
+  margin-bottom: var(--sp-6);
+}
+
+.hero-lead strong {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.hero-meta {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: 0.78125rem;
+  color: var(--text-muted);
+}
+
+.hero-meta .item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hero-meta .item svg {
+  color: var(--text-faint);
+}
+
+.hero-meta .sep {
+  color: var(--line-strong);
+}
+
+/* Stagger Animation */
+.anim {
+  animation: heroFadeIn 0.6s var(--ease-warm) both;
+  animation-delay: var(--d, 0s);
+}
+
+@keyframes heroFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* -----------------------------------------------------------------------------
+   5. Sections & Section Headers
+   ----------------------------------------------------------------------------- */
+.section {
+  padding: var(--sp-9) 0;
+  border-bottom: 1px solid var(--line-light);
+}
+.section:last-of-type {
+  border-bottom: none;
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: var(--sp-7);
+  gap: var(--sp-4);
+}
+
+.section-head h2 {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--text-main);
+  letter-spacing: -0.015em;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.section-num {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--accent);
+  background-color: var(--accent-soft);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.04em;
+}
+
+.section-note {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+/* -----------------------------------------------------------------------------
+   6. Filters (Claude Clean Pill Switchers)
+   ----------------------------------------------------------------------------- */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-6);
+}
+
+.filter {
+  padding: 6px 14px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--radius-full);
+  color: var(--text-muted);
+  background-color: var(--bg-surface-sub);
+  border: 1px solid var(--line-light);
+  cursor: pointer;
+  transition: all var(--trans-fast);
+}
+
+.filter:hover {
+  color: var(--text-main);
+  background-color: var(--bg-hover);
+  border-color: var(--line-strong);
+}
+
+.filter[aria-pressed="true"] {
+  background-color: var(--text-main);
+  color: var(--bg-surface);
+  border-color: var(--text-main);
+  font-weight: 600;
+}
+[data-theme="dark"] .filter[aria-pressed="true"] {
+  background-color: var(--accent);
+  color: #FFFFFF;
+  border-color: var(--accent);
+}
+
+/* -----------------------------------------------------------------------------
+   7. Articles Stream & Cards (Claude Editorial Cards)
+   ----------------------------------------------------------------------------- */
+.stream {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.entry {
+  position: relative;
+  padding: var(--sp-6);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--line-light);
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--trans-fast), box-shadow var(--trans-fast), border-color var(--trans-fast), background-color var(--trans-fast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.entry:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+  border-color: var(--line-strong);
+}
+
+.entry-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: 0.78125rem;
+  color: var(--text-muted);
+}
+
+.tag {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--accent);
+  background-color: var(--accent-soft);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.entry-title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 1.28rem;
+  line-height: 1.42;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
+.entry-trigger {
+  text-align: left;
+  cursor: pointer;
+  color: var(--text-main);
+  padding: 0;
+  display: block;
+  width: 100%;
+  transition: color var(--trans-fast);
+}
+
+.entry-trigger:hover,
+.entry:hover .entry-trigger {
+  color: var(--accent);
+}
+
+.entry-summary {
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.entry-arrow {
+  position: absolute;
+  top: var(--sp-6);
+  right: var(--sp-6);
+  font-size: 1.125rem;
+  color: var(--text-faint);
+  transition: transform var(--trans-fast), color var(--trans-fast);
+  pointer-events: none;
+}
+
+.entry:hover .entry-arrow {
+  transform: translateX(4px);
+  color: var(--accent);
+}
+
+/* Empty State */
+.empty-state {
+  padding: var(--sp-9) var(--sp-6);
+  text-align: center;
+  color: var(--text-muted);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+  font-size: 0.9375rem;
+  background-color: var(--bg-surface-sub);
+}
+
+/* -----------------------------------------------------------------------------
+   8. Digital Garden (Notes & Fragments)
+   ----------------------------------------------------------------------------- */
+.garden {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--sp-4);
+}
+
+.surface {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--line-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--trans-fast), border-color var(--trans-fast), transform var(--trans-fast);
+}
+
+.note {
+  padding: var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
+
+.note:hover {
+  transform: translateY(-2px);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-card);
+}
+
+.note-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+}
+
+.note-text {
+  font-family: var(--font-serif);
+  font-size: 1.03125rem;
+  line-height: 1.68;
+  color: var(--text-body);
+}
+
+.note-foot {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-faint);
+  border-top: 1px solid var(--line-light);
+  padding-top: var(--sp-3);
+  margin-top: auto;
+}
+
+/* -----------------------------------------------------------------------------
+   9. Systems & Engineering Projects
+   ----------------------------------------------------------------------------- */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.project {
+  position: relative;
+  padding: var(--sp-6);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--line-light);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  transition: border-color var(--trans-fast), box-shadow var(--trans-fast), transform var(--trans-fast);
+}
+
+.project:hover {
+  transform: translateY(-2px);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-card);
+}
+
+.project-name {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--text-main);
+  letter-spacing: -0.015em;
+}
+
+.project-desc {
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+.ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  align-self: flex-start;
+  padding: 6px 14px;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background-color: var(--bg-surface-sub);
+  border: 1px solid var(--line-light);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--trans-fast);
+}
+
+.ghost-btn:hover {
+  color: var(--text-main);
+  background-color: var(--bg-hover);
+  border-color: var(--line-strong);
+}
+
+/* -----------------------------------------------------------------------------
+   10. About Section (Literary Manifesto)
+   ----------------------------------------------------------------------------- */
+.about {
+  padding-bottom: var(--sp-10);
+}
+
+.about-quote {
+  padding: var(--sp-7);
+  background-color: var(--bg-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line-light);
+  border-left: 3px solid var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+
+.about-quote p {
+  font-family: var(--font-serif);
+  font-size: 1.125rem;
+  line-height: 1.82;
+  color: var(--text-body);
+  margin-bottom: var(--sp-4);
+}
+.about-quote p:last-child {
+  margin-bottom: 0;
+}
+
+.about-quote strong {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+/* -----------------------------------------------------------------------------
+   11. Site Footer
+   ----------------------------------------------------------------------------- */
+.site-footer {
+  padding: var(--sp-9) 0 var(--sp-10);
+  background-color: var(--bg-surface-sub);
+  border-top: 1px solid var(--line-light);
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.footer-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  padding-bottom: var(--sp-6);
+  border-bottom: 1px solid var(--line-light);
+}
+
+.footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+}
+
+.footer-links a:hover {
+  color: var(--accent);
+}
+
+.footer-bottom {
+  padding-top: var(--sp-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  font-family: var(--font-mono);
+  font-size: 0.78125rem;
+  color: var(--text-faint);
+}
+
+/* -----------------------------------------------------------------------------
+   12. Claude Artifact Reader Modal (Refined Longform Reading Experience)
+   ----------------------------------------------------------------------------- */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background-color: var(--backdrop);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: var(--sp-7) var(--sp-4);
+  overflow-y: auto;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--trans-normal), visibility var(--trans-normal);
+}
+
+.scrim[aria-hidden="false"] {
+  opacity: 1;
+  visibility: visible;
+}
+
+.reader {
+  width: 100%;
+  max-width: 740px;
+  background-color: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-modal);
+  position: relative;
+  overflow: hidden;
+  transform: translateY(16px) scale(0.99);
+  transition: transform var(--trans-normal);
+  margin-bottom: var(--sp-10);
+}
+
+.scrim[aria-hidden="false"] .reader {
+  transform: translateY(0) scale(1);
+}
+
+/* Reader Reading Progress Bar */
+.reader-progress {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background-color: var(--line-light);
+  z-index: 10;
+}
+.reader-progress-bar {
+  height: 100%;
+  width: 0%;
+  background-color: var(--accent);
+  transition: width 0.1s linear;
+}
+
+.reader-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-4) var(--sp-7);
+  border-bottom: 1px solid var(--line-light);
+  background-color: var(--bg-surface);
+}
+
+.reader-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.reader-meta #readerKind {
+  color: var(--accent);
+  font-weight: 600;
+  background-color: var(--accent-soft);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.reader-body {
+  padding: var(--sp-8) var(--sp-8) var(--sp-10);
+}
+
+.reader-body h1 {
+  font-family: var(--font-serif);
+  font-size: 2.125rem;
+  line-height: 1.32;
+  font-weight: 500;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+  margin-bottom: var(--sp-5);
+}
+
+.reader-lead {
+  font-family: var(--font-serif);
+  font-size: 1.1875rem;
+  line-height: 1.76;
+  color: var(--text-muted);
+  padding: var(--sp-5) var(--sp-6);
+  background-color: var(--bg-surface-sub);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--sp-8);
+  font-style: italic;
+}
+
+.reader-content {
+  font-size: 1.0625rem;
+  line-height: 1.84;
+  color: var(--text-body);
+}
+
+.reader-content p {
+  margin-bottom: var(--sp-6);
+}
+
+.reader-content h2,
+.reader-content h3 {
+  font-family: var(--font-serif);
+  color: var(--text-main);
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  margin-top: var(--sp-8);
+  margin-bottom: var(--sp-4);
+}
+
+.reader-content h2 {
+  font-size: 1.5rem;
+  border-bottom: 1px solid var(--line-light);
+  padding-bottom: var(--sp-2);
+}
+
+.reader-content h3 {
+  font-size: 1.25rem;
+}
+
+.reader-content strong {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.reader-content pre {
+  background-color: var(--bg-code);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  padding: var(--sp-5);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.65;
+  margin: var(--sp-6) 0;
+  color: var(--text-main);
+}
+
+.reader-content code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  background-color: var(--bg-surface-sub);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--accent);
+  border: 1px solid var(--line-light);
+}
+
+.reader-content pre code {
+  background: none;
+  padding: 0;
+  border: none;
+  color: inherit;
+}
+
+.reader-content blockquote {
+  border-left: 3px solid var(--accent);
+  padding: var(--sp-3) var(--sp-5);
+  margin: var(--sp-6) 0;
+  color: var(--text-muted);
+  font-style: italic;
+  background-color: var(--accent-soft);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.reader-content ul,
+.reader-content ol {
+  margin: var(--sp-4) 0 var(--sp-6) var(--sp-6);
+}
+
+.reader-content li {
+  margin-bottom: var(--sp-2);
+}
+
+/* -----------------------------------------------------------------------------
+   13. Search Modal (Claude Command Palette)
+   ----------------------------------------------------------------------------- */
+.search-scrim {
+  align-items: flex-start;
+  padding-top: 14vh;
+}
+
+.search-box {
+  width: 100%;
+  max-width: 580px;
+  background-color: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-modal);
+  overflow: hidden;
+  transform: translateY(12px) scale(0.99);
+  transition: transform var(--trans-normal);
+}
+
+.search-scrim[aria-hidden="false"] .search-box {
+  transform: translateY(0) scale(1);
+}
+
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-5) var(--sp-6);
+  border-bottom: 1px solid var(--line-light);
+}
+
+.search-field svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.search-field input {
+  width: 100%;
+  font-size: 1.0625rem;
+  color: var(--text-main);
+  outline: none;
+}
+.search-field input::placeholder {
+  color: var(--text-faint);
+}
+
+.search-results {
+  max-height: 380px;
+  overflow-y: auto;
+  padding: var(--sp-3);
+}
+
+.result {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--sp-4) var(--sp-4);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: background-color var(--trans-fast), border-color var(--trans-fast);
+}
+
+.result:hover,
+.result:focus-visible {
+  background-color: var(--bg-hover);
+  border-color: var(--line-light);
+}
+
+.result-title {
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+  font-weight: 500;
+  color: var(--text-main);
+  margin-bottom: 2px;
+}
+
+.result-kind {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.result-sub {
+  font-size: 0.84375rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-top: 4px;
+}
+
+.no-result {
+  padding: var(--sp-8);
+  text-align: center;
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+}
+
+/* -----------------------------------------------------------------------------
+   14. Responsive Adaptations
+   ----------------------------------------------------------------------------- */
+@media (max-width: 680px) {
+  :root {
+    --sp-6: 18px;
+    --sp-8: 28px;
+    --sp-9: 36px;
+    --sp-10: 48px;
+  }
+
+  .nav {
+    display: none;
+  }
+
+  .menu-btn {
+    display: inline-flex;
+  }
+
+  .brand-tail {
+    display: none;
+  }
+
+  .hero h1 {
+    font-size: 1.85rem;
+  }
+
+  .hero-lead {
+    font-size: 1rem;
+  }
+
+  .reader-body {
+    padding: var(--sp-6) var(--sp-5) var(--sp-8);
+  }
+
+  .reader-body h1 {
+    font-size: 1.625rem;
+  }
+
+  .mobile-nav {
+    display: flex;
+    flex-direction: column;
+    padding: var(--sp-3) 0 var(--sp-4);
+    gap: var(--sp-2);
+    border-top: 1px solid var(--line-light);
+  }
+
+  .mobile-nav[hidden] {
+    display: none;
+  }
+
+  .mobile-nav a {
+    padding: var(--sp-2) var(--sp-4);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .mobile-nav a:hover,
+  .mobile-nav a[aria-current="true"] {
+    background-color: var(--bg-hover);
+    color: var(--accent);
+  }
+}
+
+</style>
+</head>
+
+<body>
+<a class="skip-link" href="#main">跳到主要内容</a>
+
+<!-- ============================ 页头 ============================ -->
+<header class="site-header">
+  <div class="shell">
+    <div class="header-row">
+      <a class="brand" href="#top">
+        <span class="brand-mark" aria-hidden="true">h</span>
+        <span>hjt</span>
+        <span class="brand-tail">thought journal</span>
+      </a>
+
+      <nav class="nav" aria-label="主导航">
+        <a href="#articles" data-nav="articles" aria-current="true">文章</a>
+        <a href="#garden"   data-nav="garden">花园</a>
+        <a href="#systems"  data-nav="systems">工程</a>
+        <a href="#about"    data-nav="about">关于</a>
+      </nav>
+
+      <div class="header-tools">
+        <button class="icon-btn" id="searchOpen" aria-label="搜索（快捷键 Ctrl 或 Cmd + K）">
+          <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+          </svg>
+        </button>
+
+        <button class="icon-btn" id="themeToggle" aria-label="切换深浅色主题">
+          <svg id="themeIcon" aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="4.2"/>
+            <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4"/>
+          </svg>
+        </button>
+
+        <button class="icon-btn menu-btn" id="menuToggle" aria-label="打开导航菜单" aria-expanded="false" aria-controls="mobileNav">
+          <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M3 6h18M3 12h18M3 18h18"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <nav class="mobile-nav" id="mobileNav" aria-label="移动端导航" hidden>
+      <a href="#articles">文章</a>
+      <a href="#garden">花园</a>
+      <a href="#systems">工程</a>
+      <a href="#about">关于</a>
+    </nav>
+  </div>
+</header>
+
+<main class="shell" id="main">
+  <span id="top"></span>
+
+  <!-- ============================ 首屏 ============================ -->
+  <section class="hero">
+    <div class="hero-glow" aria-hidden="true"></div>
+
+    <p class="hero-status anim" style="--d:.05s">
+      <span class="pulse" aria-hidden="true"></span>
+      ✦ 持续构建与思考中
+    </p>
+
+    <h1 class="anim" style="--d:.14s">在复杂计算系统里，<br />寻找<em>确定性的秩序</em>。</h1>
+
+    <p class="hero-lead anim" style="--d:.24s">
+      这里记录 <strong>hjt</strong> 的工程笔记与思考：操作系统内核机制、计算机体系结构、大模型 Agent 工作流与认知科学。只写证实能够工作的东西。
+    </p>
+
+    <div class="hero-meta anim" style="--d:.34s">
+      <span class="item">
+        <svg aria-hidden="true" focusable="false" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        全站 5 篇深度长文
+      </span>
+      <span class="sep" aria-hidden="true">·</span>
+      <span class="item">4 份花园笔记</span>
+      <span class="sep" aria-hidden="true">·</span>
+      <span class="item">3 个系统工程</span>
+      <span class="sep" aria-hidden="true">·</span>
+      <span class="item">Focus: Kernel &amp; AI</span>
+    </div>
+  </section>
+
+  <!-- ============================ 文章 ============================ -->
+  <section class="section" id="articles" aria-labelledby="articles-h">
+    <div class="section-head">
+      <h2 id="articles-h"><span class="section-num">01</span>深度长文</h2>
+      <p class="section-note" id="articleCount"></p>
+    </div>
+
+    <div class="filters" role="group" aria-label="按主题筛选文章">
+      <button class="filter" data-filter="all"       aria-pressed="true">全部</button>
+      <button class="filter" data-filter="systems"   aria-pressed="false">底层与体系</button>
+      <button class="filter" data-filter="ai"        aria-pressed="false">AI 与工作流</button>
+      <button class="filter" data-filter="cognition" aria-pressed="false">思维与认知</button>
+    </div>
+
+    <div class="stream" id="stream">
+
+      <article class="entry" data-kind="systems">
+        <div class="entry-meta">
+          <time datetime="2025-02-18">2025.02.18</time>
+          <span class="tag">操作系统</span>
+          <span>10 min</span>
+        </div>
+        <h3 class="entry-title">
+          <button class="entry-trigger" type="button" data-article="1">从进程状态机到大模型 Agent 状态流：系统抽象的演化同构性</button>
+        </h3>
+        <p class="entry-summary">经典操作系统用 PCB、上下文切换与就绪阻塞队列解耦算力与任务；现代 LLM Agent 则用 Context Window、Tool Use 轮询与内存插槽重构认知状态机。</p>
+        <span class="entry-arrow" aria-hidden="true">→</span>
+      </article>
+
+      <article class="entry" data-kind="systems">
+        <div class="entry-meta">
+          <time datetime="2025-01-24">2025.01.24</time>
+          <span class="tag">体系结构</span>
+          <span>7 min</span>
+        </div>
+        <h3 class="entry-title">
+          <button class="entry-trigger" type="button" data-article="2">深入理解内存墙：从 Cache 缺失惩罚到现代高并发内存拓扑</button>
+        </h3>
+        <p class="entry-summary">处理器与 DRAM 的速度鸿沟演化了四十年。从多级页表、TLB 缺失代价，一路拆到 NUMA 架构下的本地与远端访问延迟。</p>
+        <span class="entry-arrow" aria-hidden="true">→</span>
+      </article>
+
+      <article class="entry" data-kind="ai">
+        <div class="entry-meta">
+          <time datetime="2024-12-30">2024.12.30</time>
+          <span class="tag">AI 工作流</span>
+          <span>8 min</span>
+        </div>
+        <h3 class="entry-title">
+          <button class="entry-trigger" type="button" data-article="3">反直觉的 Prompt 工程：把 LLM 当作不可靠的编译器，而不是百科全书</button>
+        </h3>
+        <p class="entry-summary">为什么越详尽的提示词越容易让模型注意力涣散？三条工程实践：角色分离、少样本契约、状态外置。</p>
+        <span class="entry-arrow" aria-hidden="true">→</span>
+      </article>
+
+      <article class="entry" data-kind="cognition">
+        <div class="entry-meta">
+          <time datetime="2024-11-15">2024.11.15</time>
+          <span class="tag">个人哲学</span>
+          <span>5 min</span>
+        </div>
+        <h3 class="entry-title">
+          <button class="entry-trigger" type="button" data-article="4">信息节食与长程思考：在被信息流撕裂的时代重建知识主权</button>
+        </h3>
+        <p class="entry-summary">如何对抗算法推荐制造的信息肥胖。退订推荐流、用自己的话重写、每周留出断网的白纸时间。</p>
+        <span class="entry-arrow" aria-hidden="true">→</span>
+      </article>
+
+      <article class="entry" data-kind="ai">
+        <div class="entry-meta">
+          <time datetime="2024-10-08">2024.10.08</time>
+          <span class="tag">行情系统</span>
+          <span>9 min</span>
+        </div>
+        <h3 class="entry-title">
+          <button class="entry-trigger" type="button" data-article="5">高并行行情管道的设计抉择：序列号校验与微秒级状态一致性</button>
+        </h3>
+        <p class="entry-summary">分布式系统最磨人的不是彻底宕机，而是半死不活的静默丢包。用严格单调的更新编号加环形快照差分恢复。</p>
+        <span class="entry-arrow" aria-hidden="true">→</span>
+      </article>
+
+    </div>
+
+    <p class="empty-state" id="emptyState" hidden>这个分类下还没有文章。</p>
+  </section>
+
+  <!-- ============================ 花园 ============================ -->
+  <section class="section" id="garden" aria-labelledby="garden-h">
+    <div class="section-head">
+      <h2 id="garden-h"><span class="section-num">02</span>数字花园</h2>
+      <p class="section-note">未成文的碎片</p>
+    </div>
+
+    <div class="garden">
+      <div class="surface note" id="note-1">
+        <p class="note-label">内核笔记</p>
+        <p class="note-text">中断是操作系统获得 CPU 控制权的唯一非自愿途径。任何自认为掌握系统的程序，在定时器滴答与 I/O 中断面前，都不过是一份暂存的寄存器快照。</p>
+        <p class="note-foot"><span>#408</span><span>2025.02</span></p>
+      </div>
+
+      <div class="surface note" id="note-2">
+        <p class="note-label">Agent 思考</p>
+        <p class="note-text">给大模型加思维链，本质上不是教它推理，而是给自注意力腾出足够的草稿纸，消除单步预测的局部最优陷阱。</p>
+        <p class="note-foot"><span>#推理</span><span>2025.01</span></p>
+      </div>
+
+      <div class="surface note" id="note-3">
+        <p class="note-label">工具观</p>
+        <p class="note-text">好的工作流工具像优秀的内核：静默运行在后台，提供确定可靠的系统调用，而不是每天弹窗告诉你它有多努力。</p>
+        <p class="note-foot"><span>#克制</span><span>2024.12</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ 工程 ============================ -->
+  <section class="section" id="systems" aria-labelledby="systems-h">
+    <div class="section-head">
+      <h2 id="systems-h"><span class="section-num">03</span>在用的小工具</h2>
+      <p class="section-note">自己写、自己用</p>
+    </div>
+
+    <div class="stream">
+      <div class="project" id="project-1">
+        <div>
+          <p class="project-name">408 Tutor <span class="tag">自用</span></p>
+          <p class="project-desc">计算机专业课的结构化知识检索与自适应刷题系统，覆盖组成原理、操作系统、数据结构与网络。</p>
+        </div>
+        <button class="ghost-btn" type="button" data-copy="Desktop/recent-project/408-tutor">复制路径</button>
+      </div>
+
+      <div class="project" id="project-2">
+        <div>
+          <p class="project-name">Antigravity <span class="tag">工具链</span></p>
+          <p class="project-desc">本地多任务调度与自动化工具链，连接数据收集、跨端同步与即时通知。</p>
+        </div>
+        <button class="ghost-btn" type="button" data-copy="Desktop/recent-project/Antigravity-Manager">复制路径</button>
+      </div>
+
+      <div class="project" id="project-3">
+        <div>
+          <p class="project-name">Orderbook Connector <span class="tag">管道</span></p>
+          <p class="project-desc">低延迟行情聚合管道，支持断线平滑回补、增量深度校验与事件总线分发。</p>
+        </div>
+        <button class="ghost-btn" type="button" data-copy="Desktop/recent-project/binance_connector">复制路径</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ 关于 ============================ -->
+  <section class="section" id="about" aria-labelledby="about-h">
+    <div class="section-head">
+      <h2 id="about-h"><span class="section-num">04</span>关于</h2>
+      <p class="section-note">理念</p>
+    </div>
+
+    <div class="about">
+      <p class="about-quote">代码是写给机器执行的精确逻辑，<br />写作是写给人理解的结构化沉淀。</p>
+
+      <p>你好，我是 <strong>hjt</strong>。对计算机底层如何运转怀有敬畏，也是大模型时代自动化工作流的实践者。</p>
+      <p>我相信<strong>克制</strong>。好的软件不需要冗余动效与堆叠的卡片，好的文章不需要故弄玄虚的名词。文字与留白本身就是最有效的界面。</p>
+      <p>日常除了啃 408 与动手造系统，习惯用 Obsidian 梳理认知图谱，在终端里写些真正用得上的脚本。</p>
+
+      <div class="stack">
+        <span>C / C++</span>
+        <span>Python</span>
+        <span>TypeScript</span>
+        <span>Linux</span>
+        <span>Obsidian</span>
+        <span>Prompt Engineering</span>
+      </div>
+    </div>
+  </section>
+
+  <p class="sr-only" role="status" aria-live="polite" id="liveRegion"></p>
+</main>
+
+<!-- ============================ 页脚 ============================ -->
+<footer class="site-footer">
+  <div class="shell">
+    <div class="footer-top">
+      <p class="footer-brand">hjt</p>
+      <nav class="footer-links" aria-label="联系方式">
+        <a href="https://github.com" target="_blank" rel="noopener noreferrer">GitHub</a>
+        <a href="mailto:hjt@example.com">Email</a>
+        <a href="#articles">回到顶部</a>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <p>© <span id="year">2025</span> hjt</p>
+      <p>宋体 · 本地字体 · 对比度全达标 AA</p>
+    </div>
+  </div>
+</footer>
+
+<!-- ============================ 阅读层 ============================ -->
+<div class="scrim reader-scrim" id="readerScrim">
+  <article class="reader" role="dialog" aria-modal="true" aria-labelledby="readerTitle" id="reader">
+    <div class="reader-progress" aria-hidden="true">
+      <div class="reader-progress-bar" id="readerProgressBar"></div>
+    </div>
+    <div class="reader-bar">
+      <p class="reader-meta">
+        <span id="readerKind">—</span>
+        <span aria-hidden="true">·</span>
+        <time id="readerDate">—</time>
+      </p>
+      <button class="ghost-btn" type="button" id="readerClose">关闭 ESC</button>
+    </div>
+    <div class="reader-body">
+      <h1 id="readerTitle"></h1>
+      <p class="reader-lead" id="readerLead"></p>
+      <div class="reader-content" id="readerContent"></div>
+    </div>
+  </article>
+</div>
+
+<!-- ============================ 搜索层 ============================ -->
+<div class="scrim search-scrim" id="searchScrim">
+  <div class="search-box" role="dialog" aria-modal="true" aria-label="站内搜索">
+    <div class="search-field">
+      <svg aria-hidden="true" focusable="false" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+      </svg>
+      <input type="search" id="searchInput" placeholder="搜索文章、笔记或工程…"
+             role="combobox" aria-expanded="false" aria-controls="searchResults" aria-autocomplete="list" autocomplete="off" />
+      <span class="keyhint" aria-hidden="true">ESC</span>
+    </div>
+    <div class="search-results" id="searchResults" role="listbox" aria-label="搜索结果"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var $  = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+
+  /* ==========================================================================
+     文章正文。列表由 HTML 承载，这里只存正文，避免标题两处重复导致漂移。
+     ========================================================================== */
+  var ARTICLES = {
+    1: {
+      kind: '操作系统',
+      date: '2025.02.18',
+      title: '从进程状态机到大模型 Agent 状态流：系统抽象的演化同构性',
+      lead: '计算机科学里少有全新的问题，多是在不同抽象层级上的周而复始。经典内核的调度模型，正在 Agent 时代以惊人的相似度重生。',
+      body:
+        '<p>复习 408 的这几个月，我反复面对经典的三态与五态进程模型：<strong>就绪、运行、阻塞</strong>。这个几十年前就成熟的模型，核心是解决一个矛盾——<strong>高速的计算单元与低速的外部环境之间速度不匹配</strong>。</p>' +
+        '<h2>内核的解法：PCB 与上下文切换</h2>' +
+        '<p>为了让 CPU 永不闲置，内核抽象出<strong>进程控制块</strong>。当运行中的进程需要发起慢速磁盘 I/O 时，CPU 并不自旋等待，而是保护现场：把通用寄存器、程序计数器、标志位压栈，将进程标记为阻塞并挂入等待队列；随后调度器载入另一个就绪进程的上下文并恢复执行。</p>' +
+        '<blockquote>状态切换的本质，是把正在流动的计算过程冻结成一份静态的数据结构；等外部触发就绪信号后，再把结构解冻还原为执行流。</blockquote>' +
+        '<h2>Agent 的现状：Token 级的上下文调度</h2>' +
+        '<p>回看当下由大语言模型驱动的 Agent 系统，它遭遇的痛点何其相似：</p>' +
+        '<pre><code>while (!taskCompleted) {\n    thought = LLM.reason(contextMemory);\n    action  = parseToolCall(thought);\n\n    // 进入阻塞态：等待外部 API / 网络返回\n    observation = executeTool(action);\n\n    // 上下文注入：更新状态，准备下一次推进\n    contextMemory.append(observation);\n}</code></pre>' +
+        '<p>每一次 Tool Use 都是对高延迟外部世界的一次 I/O。模型自身像一枚极其昂贵的计算内核，而长长的上下文窗口就是它的工作内存。若在等待返回的数秒里单纯锁死线程，吞吐量会极其惨烈。</p>' +
+        '<h2>接下来必然发生的事</h2>' +
+        '<p>很多人抱怨长上下文下模型容易迷失在中间，同时 Token 成本高昂。出路不会来自蛮力扩大窗口，而必然走向类似<strong>分页虚拟内存</strong>的做法：动态评估历史 Token 的局部性，把冷上下文压缩换出到外部存储，命中时再引发一次缺页装入。</p>' +
+        '<p>理解了内核的抽象，就能看清 AI 基础设施的演化脉络。技术很少凭空爆发，它只是换了一身外衣，沿着系统设计的既定规律继续向前。</p>'
+    },
+    2: {
+      kind: '体系结构',
+      date: '2025.01.24',
+      title: '深入理解内存墙：从 Cache 缺失惩罚到现代高并发内存拓扑',
+      lead: '当 CPU 时钟进入皮秒级，而访问一次主存仍要数十纳秒，现代计算的一切优化实质上都在与光速和物理距离抗争。',
+      body:
+        '<p>现代体系结构里最残酷的一组数字，是访问延迟的阶梯：L1 约 1ns，L2 约 3–4ns，L3 约 10–15ns，而一旦缺失跌入物理主存，时间骤然攀升到 60–100ns。</p>' +
+        '<h2>局部性原理的边界</h2>' +
+        '<p>教科书说 Cache 依靠局部性工作。但当我们真的去写海量指针链接的结构——比如复杂的平衡树或无锁跳表——指针的每一次随机解引用都会击碎硬件预取器的期望，导致流水线深度停顿。</p>' +
+        '<blockquote>在性能敏感的场景里，好的数据结构追求的从来不是渐进复杂度，而是对 Cache Line 连续填充的尊重。</blockquote>' +
+        '<p>这也是现代数据库引擎与高性能网络栈全面转向紧凑连续内存布局的原因。</p>' +
+        '<h2>NUMA 把问题又推了一层</h2>' +
+        '<p>多路服务器上，内存不再是均质的。跨 Socket 访问远端内存的延迟可能接近本地的一点八倍。于是「数据放哪里」变成了和「算法怎么写」同等重要的设计决策，线程亲和性与内存绑定的重要性随之上升。</p>'
+    },
+    3: {
+      kind: 'AI 工作流',
+      date: '2024.12.30',
+      title: '反直觉的 Prompt 工程：把 LLM 当作不可靠的编译器，而不是百科全书',
+      lead: '不要期待模型理解你的愿望，而要像给一个有缺陷的编译器写严谨的宏一样，用输入输出的结构契约把它框住。',
+      body:
+        '<p>大部分提示词失败，是因为人类默认带着大量未经言明的背景共识，而自回归模型只是在按概率分布预测下一个词。</p>' +
+        '<h2>三条核心法则</h2>' +
+        '<p><strong>角色分离。</strong>指令与输入数据必须用明确的分隔符严格解耦，别让它们混在同一段自然语言里。</p>' +
+        '<p><strong>少样本契约。</strong>给出一个负例，比写三行「严禁输出任何额外客套话」有用十倍。</p>' +
+        '<p><strong>状态外置。</strong>不要让单一提示词同时承担规划、撰写、审查三重任务，拆成三个连续的、不可变的阶段。</p>' +
+        '<blockquote>当你开始用编译器的眼光看待模型——输入是源码，输出是目标产物，中间任何歧义都会被放大成错误——提示词设计就从一个玄学问题变成了工程问题。</blockquote>'
+    },
+    4: {
+      kind: '个人哲学',
+      date: '2024.11.15',
+      title: '信息节食与长程思考：在被信息流撕裂的时代重建知识主权',
+      lead: '当信息获取的摩擦力趋近于零，专注与深思就成了极其稀缺的奢侈品。',
+      body:
+        '<p>每天被动刷完上百条推送的人，往往会产生一种「我今天学到了很多」的智力虚荣感。然而一周后回想，大脑里只剩断裂的碎片和注意力溃散后的疲惫。</p>' +
+        '<h2>我给自己定的三条防线</h2>' +
+        '<p><strong>第一，退订。</strong>关掉所有算法驱动的推荐信息流，只留高质量订阅源和纸质书。</p>' +
+        '<p><strong>第二，重写。</strong>任何未能用自己的话在笔记里重写一遍的知识，都视作没读过。</p>' +
+        '<p><strong>第三，留白。</strong>每周至少三小时完全不联网的白纸时间，纯粹用来手写梳理一个复杂命题。</p>'
+    },
+    5: {
+      kind: '行情系统',
+      date: '2024.10.08',
+      title: '高并行行情管道的设计抉择：序列号校验与微秒级状态一致性',
+      lead: '分布式系统里最磨人的不是彻底宕机，而是半死不活的静默丢包与心跳假死。',
+      body:
+        '<p>做多交易所的实时连接器时，网络抖动是不可避免的物理现实。单次心跳超时就暴力重连，容易引发连接风暴；等得太久，缓存的深度数据早已脱节失效。</p>' +
+        '<h2>最终采纳的方案</h2>' +
+        '<p>结合「更新编号严格单调递增校验」与「环形快照差分恢复」：每个推送包检查更新编号，一旦发现空洞立即异步拉取快照重置本地状态。代价是偶发的整表重建，收益是撮合侧永远站在确信的状态基底上。</p>' +
+        '<blockquote>在一致性问题上，宁可付出重建的成本，也不要带着不确定的状态继续往下算。错误的状态比没有状态更危险。</blockquote>'
+    }
+  };
+
+  /* ==========================================================================
+     1. 主题
+     ========================================================================== */
+  var root = document.documentElement;
+  var themeToggle = $('#themeToggle');
+  var themeIcon = $('#themeIcon');
+
+  var ICON_SUN =
+    '<circle cx="12" cy="12" r="4.2"/>' +
+    '<path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4"/>';
+  var ICON_MOON = '<path d="M20.8 14.6A9 9 0 0 1 9.4 3.2a9 9 0 1 0 11.4 11.4z"/>';
+
+  function paintTheme(theme) {
+    var dark = theme === 'dark';
+    themeIcon.innerHTML = dark ? ICON_MOON : ICON_SUN;
+    themeToggle.setAttribute('aria-label', dark ? '切换到浅色主题' : '切换到深色主题');
+  }
+
+  paintTheme(root.getAttribute('data-theme'));
+
+  themeToggle.addEventListener('click', function () {
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    paintTheme(next);
+    try { localStorage.setItem('hjt_theme', next); } catch (e) {}
+  });
+
+  /* ==========================================================================
+     2. 弹层基础：滚动锁定 + 焦点归还 + 焦点陷阱
+     ========================================================================== */
+  var FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  var lastFocused = null;
+
+  function lockScroll(on) { document.body.style.overflow = on ? 'hidden' : ''; }
+
+  function openLayer(scrim, focusTarget) {
+    lastFocused = document.activeElement;
+    scrim.setAttribute('data-open', '');
+    lockScroll(true);
+    if (focusTarget) requestAnimationFrame(function () { focusTarget.focus(); });
+  }
+
+  function closeLayer(scrim) {
+    scrim.removeAttribute('data-open');
+    lockScroll(false);
+    if (lastFocused && document.contains(lastFocused)) lastFocused.focus();
+    lastFocused = null;
+  }
+
+  function trapFocus(e, scrim) {
+    if (e.key !== 'Tab') return;
+    var items = $$(FOCUSABLE, scrim).filter(function (el) { return el.offsetParent !== null; });
+    if (!items.length) return;
+    var first = items[0], last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+
+  /* ==========================================================================
+     3. 阅读层
+     ========================================================================== */
+  var readerScrim = $('#readerScrim');
+  var readerClose = $('#readerClose');
+
+  function openReader(id) {
+    var a = ARTICLES[id];
+    if (!a) return;
+    $('#readerKind').textContent = a.kind;
+    $('#readerDate').textContent = a.date;
+    $('#readerTitle').textContent = a.title;
+    $('#readerLead').textContent = a.lead;
+    $('#readerContent').innerHTML = a.body;
+    var progressBar = $('#readerProgressBar');
+    if (progressBar) progressBar.style.width = '0%';
+    openLayer(readerScrim, readerClose);
+    readerScrim.scrollTop = 0;
+  }
+
+  /* 监听阅读器滚动进度 */
+  readerScrim.addEventListener('scroll', function () {
+    var progressBar = $('#readerProgressBar');
+    if (!progressBar) return;
+    var maxScroll = readerScrim.scrollHeight - readerScrim.clientHeight;
+    if (maxScroll > 0) {
+      var pct = Math.min(100, Math.max(0, (readerScrim.scrollTop / maxScroll) * 100));
+      progressBar.style.width = pct + '%';
+    }
+  });
+
+  function closeReader() { closeLayer(readerScrim); }
+
+  document.addEventListener('click', function (e) {
+    if (!e.target || !e.target.closest) return;
+    var trigger = e.target.closest('[data-article]');
+    if (trigger) { openReader(trigger.getAttribute('data-article')); return; }
+    var copyBtn = e.target.closest('[data-copy]');
+    if (copyBtn) copyPath(copyBtn);
+  });
+
+  /* 复制工程路径。三级降级：剪贴板 API → execCommand → 直接把路径显示在按钮上。 */
+  function copyPath(btn) {
+    var path = btn.getAttribute('data-copy');
+    var original = btn.textContent;
+
+    function report(msg) {
+      btn.textContent = msg;
+      $('#liveRegion').textContent = msg + '：' + path;
+      clearTimeout(btn._resetTimer);
+      btn._resetTimer = setTimeout(function () { btn.textContent = original; }, 1800);
+    }
+
+    function legacyCopy() {
+      var ta = document.createElement('textarea');
+      ta.value = path;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
+      document.body.removeChild(ta);
+      return ok;
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(path)
+        .then(function () { report('已复制'); })
+        .catch(function () { report(legacyCopy() ? '已复制' : path); });
+    } else {
+      report(legacyCopy() ? '已复制' : path);
+    }
+  }
+
+  readerClose.addEventListener('click', closeReader);
+  readerScrim.addEventListener('click', function (e) { if (e.target === readerScrim) closeReader(); });
+  readerScrim.addEventListener('keydown', function (e) { trapFocus(e, readerScrim); });
+
+  /* ==========================================================================
+     4. 搜索层（索引统一从 DOM 构建，单一数据源）
+     ========================================================================== */
+  var searchScrim = $('#searchScrim');
+  var searchInput = $('#searchInput');
+  var searchResults = $('#searchResults');
+  var searchOpen = $('#searchOpen');
+
+  var INDEX = buildIndex();
+  var activeIndex = -1;
+
+  function buildIndex() {
+    var out = [];
+
+    $$('#stream .entry').forEach(function (entry) {
+      var btn = $('.entry-trigger', entry);
+      out.push({
+        kind: '文章',
+        title: btn.textContent.trim(),
+        sub: ($('.entry-summary', entry) || {}).textContent || '',
+        action: function () { openReader(btn.getAttribute('data-article')); }
+      });
+    });
+
+    $$('#garden .note').forEach(function (note) {
+      out.push({
+        kind: '笔记',
+        title: $('.note-label', note).textContent.trim(),
+        sub: $('.note-text', note).textContent.trim(),
+        action: function () { jumpTo(note); }
+      });
+    });
+
+    $$('#systems .project').forEach(function (proj) {
+      out.push({
+        kind: '工程',
+        title: $('.project-name', proj).textContent.trim(),
+        sub: $('.project-desc', proj).textContent.trim(),
+        action: function () { jumpTo(proj); }
+      });
+    });
+
+    return out;
+  }
+
+  function jumpTo(el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    flash(el);
+  }
+
+  function flash(el) {
+    if (!el) return;
+    el.classList.remove('flash');
+    void el.offsetWidth;               // 强制重排，让动画可重复触发
+    el.classList.add('flash');
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function renderResults(list, query) {
+    activeIndex = -1;
+
+    if (!list.length) {
+      searchResults.innerHTML = '<p class="no-result">没有找到与「' + escapeHtml(query) + '」相关的内容</p>';
+      searchInput.setAttribute('aria-expanded', 'false');
+      searchInput.removeAttribute('aria-activedescendant');
+      return;
+    }
+
+    searchResults.innerHTML = list.map(function (item, i) {
+      return '<button class="result" type="button" role="option" id="opt-' + i + '" data-i="' + i + '" aria-selected="false">' +
+               '<span class="result-kind">' + escapeHtml(item.kind) + '</span>' +
+               '<span class="result-title">' + escapeHtml(item.title) + '</span>' +
+               '<span class="result-sub">' + escapeHtml(item.sub) + '</span>' +
+             '</button>';
+    }).join('');
+
+    searchInput.setAttribute('aria-expanded', 'true');
+    searchInput.removeAttribute('aria-activedescendant');
+  }
+
+  function currentMatches() {
+    var q = searchInput.value.trim().toLowerCase();
+    if (!q) return null;
+    return INDEX.filter(function (item) {
+      return (item.title + ' ' + item.sub + ' ' + item.kind).toLowerCase().indexOf(q) !== -1;
+    });
+  }
+
+  function onSearchInput() {
+    var matches = currentMatches();
+    if (matches === null) {
+      searchResults.innerHTML = '<p class="no-result">输入关键词，检索文章、笔记与工程</p>';
+      activeIndex = -1;
+      return;
+    }
+    renderResults(matches, searchInput.value.trim());
+  }
+
+  function openSearch() { openLayer(searchScrim, searchInput); onSearchInput(); }
+
+  function closeSearch() {
+    closeLayer(searchScrim);
+    searchInput.value = '';
+    searchResults.innerHTML = '';
+    activeIndex = -1;
+  }
+
+  searchOpen.addEventListener('click', openSearch);
+  searchScrim.addEventListener('click', function (e) { if (e.target === searchScrim) closeSearch(); });
+  searchScrim.addEventListener('keydown', function (e) { trapFocus(e, searchScrim); });
+  searchInput.addEventListener('input', onSearchInput);
+
+  searchResults.addEventListener('click', function (e) {
+    var btn = e.target.closest('.result');
+    if (!btn) return;
+    var matches = currentMatches();
+    if (!matches) return;
+    var item = matches[Number(btn.getAttribute('data-i'))];
+    if (!item) return;
+    closeSearch();
+    item.action();
+  });
+
+  searchInput.addEventListener('keydown', function (e) {
+    var btns = $$('.result', searchResults);
+    if (!btns.length) return;
+
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIndex = e.key === 'ArrowDown'
+        ? (activeIndex + 1) % btns.length
+        : (activeIndex - 1 + btns.length) % btns.length;
+      btns.forEach(function (b, i) {
+        var on = i === activeIndex;
+        b.setAttribute('data-active', on ? 'true' : 'false');
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      searchInput.setAttribute('aria-activedescendant', 'opt-' + activeIndex);
+      btns[activeIndex].scrollIntoView({ block: 'nearest' });
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      var target = activeIndex >= 0 ? btns[activeIndex] : btns[0];
+      if (target) target.click();
+    }
+  });
+
+  /* ==========================================================================
+     5. 全局快捷键
+     ========================================================================== */
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      if (searchScrim.hasAttribute('data-open')) { closeSearch(); return; }
+      if (readerScrim.hasAttribute('data-open')) { closeReader(); return; }
+      if (mobileNav && !mobileNav.hidden) { toggleMenu(false); return; }
+    }
+
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      if (searchScrim.hasAttribute('data-open')) closeSearch();
+      else openSearch();
+    }
+
+    if (e.key === '/' && !/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) {
+      e.preventDefault();
+      openSearch();
+    }
+  });
+
+  /* ==========================================================================
+     6. 筛选 + 计数（由 DOM 推导，不再写死）
+     ========================================================================== */
+  var filters = $$('.filter');
+  var entries = $$('#stream .entry');
+  var countEl = $('#articleCount');
+  var emptyEl = $('#emptyState');
+  var TOTAL = entries.length;
+
+  function applyFilter(kind) {
+    var shown = 0;
+    entries.forEach(function (entry) {
+      var hit = kind === 'all' || entry.getAttribute('data-kind') === kind;
+      entry.hidden = !hit;
+      if (hit) shown++;
+    });
+    countEl.textContent = kind === 'all' ? TOTAL + ' 篇' : shown + ' / ' + TOTAL + ' 篇';
+    emptyEl.hidden = shown !== 0;
+  }
+
+  filters.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      filters.forEach(function (b) { b.setAttribute('aria-pressed', 'false'); });
+      btn.setAttribute('aria-pressed', 'true');
+      applyFilter(btn.getAttribute('data-filter'));
+    });
+  });
+
+  applyFilter('all');
+
+  /* ==========================================================================
+     7. 移动端导航
+     ========================================================================== */
+  var menuToggle = $('#menuToggle');
+  var mobileNav = $('#mobileNav');
+
+  function toggleMenu(open) {
+    mobileNav.hidden = !open;
+    menuToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    menuToggle.setAttribute('aria-label', open ? '关闭导航菜单' : '打开导航菜单');
+    if (open) { var first = $('a', mobileNav); if (first) first.focus(); }
+    else menuToggle.focus();
+  }
+
+  menuToggle.addEventListener('click', function () { toggleMenu(mobileNav.hidden); });
+
+  document.addEventListener('click', function (e) {
+    if (mobileNav.hidden) return;
+    if (mobileNav.contains(e.target) || menuToggle.contains(e.target)) return;
+    toggleMenu(false);
+  });
+
+  mobileNav.addEventListener('click', function (e) {
+    if (e.target.tagName === 'A') toggleMenu(false);
+  });
+
+  /* ==========================================================================
+     8. 滚动高亮当前区块
+     ========================================================================== */
+  var navLinks = $$('[data-nav]');
+  var sections = navLinks
+    .map(function (a) { return document.getElementById(a.getAttribute('data-nav')); })
+    .filter(Boolean);
+
+  if ('IntersectionObserver' in window && sections.length) {
+    var visible = {};
+    var io = new IntersectionObserver(function (list) {
+      list.forEach(function (item) {
+        visible[item.target.id] = item.isIntersecting ? item.intersectionRatio : 0;
+      });
+      var best = null;
+      Object.keys(visible).forEach(function (id) {
+        if (visible[id] > 0 && (!best || visible[id] > visible[best])) best = id;
+      });
+      if (!best) return;
+      navLinks.forEach(function (a) {
+        a.setAttribute('aria-current', a.getAttribute('data-nav') === best ? 'true' : 'false');
+      });
+    }, { rootMargin: '-72px 0px -55% 0px', threshold: [0, .25, .5, .75, 1] });
+    sections.forEach(function (s) { io.observe(s); });
+  }
+
+  /* ==========================================================================
+     9. 杂项
+     ========================================================================== */
+  $('#year').textContent = new Date().getFullYear();
+  var d = new Date();
+  $('#stamp').textContent = '更新于 ' + d.getFullYear() + '.' + String(d.getMonth() + 1).padStart(2, '0');
+})();
+</script>
+</body>
+</html>
